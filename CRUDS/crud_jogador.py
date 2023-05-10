@@ -1,5 +1,4 @@
 import psycopg2
-from psycopg2 import Error
 from flask import Flask, request, jsonify
 
 # Configuração do banco de dados
@@ -17,13 +16,13 @@ app = Flask(__name__)
 def get_jogadores():
     cursor = conf.cursor()
     cursor.execute("SELECT * FROM jogos.jogador;")
-    jogos = cursor.fetchall()
+    jogadores = cursor.fetchall()
     cursor.close()
 
     return jsonify(jogadores)
 
 
-@app.route(f'/jogador/<int:id_jogador>', methods=['GET'])
+@app.route(f'/jogador/<int:jogador_id>', methods=['GET'])
 def get_jogadorid(jogador_id):
     cursor = conf.cursor()
     cursor.execute(f"SELECT * FROM jogos.jogador WHERE id_jogador = {jogador_id};")
@@ -38,19 +37,21 @@ def get_jogadorid(jogador_id):
 
 @app.route(f'/jogadores/add', methods=['POST'])
 def post_jogador():
-
     jogador = request.get_json()
     id_jogador = jogador['id_jogador']
 
     if jogador.get('nickname') is None or jogador.get('usuario_email') is None:
         return jsonify({'erro': 'faltam campos obrigatorios'})
 
+    if confere_email(jogador.get('usuario_email')):
+        return jsonify({'erro': 'não existe usuario com esse email'})
+
     if not confere_jogador(id_jogador):
         return jsonify({'erro': 'ja existe jogador com esse id'})
-    
+
     cur = conf.cursor()
 
-    sql = f"INSERT INTO jogos.jogador VALUES ({jogador['id_jogador']},'{jogador['usuario_email']}',{jogador['nickname']},{jogador['nivel']});"
+    sql = f"INSERT INTO jogos.jogador VALUES ({jogador['id_jogador']},'{jogador['usuario_email']}','{jogador['nickname']}',{jogador['nivel']});"
     print(sql)
     cur.execute(sql)
     conf.commit()
@@ -69,12 +70,10 @@ def confere_jogador(pk):
 
 def confere_email(pk):
     cursor = conf.cursor()
-    cursor.execute(f"SELECT * FROM jogos.usuario WHERE email_usuario = {pk};")
+    cursor.execute(f"SELECT * FROM jogos.usuario WHERE email_usuario = '{pk}';")
     email = cursor.fetchall()
     cursor.close()
     return not email
-
-
 
 
 @app.route('/jogadores/<int:id_jogador>', methods=['PUT'])
@@ -88,11 +87,10 @@ def update_jogador(id_jogador):
         return jsonify({'erro': 'nao existe jogador com esse id'})
 
     if confere_email(jogador['usuario_email']):
-        return jsonify({'erro': 'nao existe email com esse id'}) #essa parte ta confusa
-
+        return jsonify({'erro': 'este email não esta cadastrado'})
     cur = conf.cursor()
 
-    sql = f"UPDATE jogos.jogador SET usuario_email = '{jogador['usuario_email']}', nickname = {jogador['nickname']}," \
+    sql = f"UPDATE jogos.jogador SET usuario_email = '{jogador['usuario_email']}', nickname = '{jogador['nickname']}'," \
           f"nivel = {jogador['nivel']} WHERE id_jogador = {id_jogador} ;"
     print(sql)
     cur.execute(sql)

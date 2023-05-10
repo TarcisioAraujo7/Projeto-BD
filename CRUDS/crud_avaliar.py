@@ -9,23 +9,23 @@ conf = psycopg2.connect(
     password="123"
 )
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 
 @app.route('/avaliacoes', methods=['GET'])
 def get_avaliacoes():
     cursor = conf.cursor()
-    cursor.execute("SELECT * FROM jogos.avaliacao;")
+    cursor.execute("SELECT * FROM jogos.avalia;")
     avaliacoes = cursor.fetchall()
     cursor.close()
 
     return jsonify(avaliacoes)
 
 
-@app.route(f'/avaliacoes/<int:id_jogador>', methods=['GET'])
-def get_avaliacao(id_jogador):
+@app.route(f'/avaliacoes/<int:id_jogador>/<int:id_jogo>', methods=['GET'])
+def get_avaliacao(id_jogador, id_jogo):
     cursor = conf.cursor()
-    cursor.execute(f"SELECT * FROM jogos.avaliacao WHERE id_jogador = {id_jogador};")
+    cursor.execute(f"SELECT * FROM jogos.avalia WHERE id_jogador = {id_jogador} AND id_jogo = {id_jogo};")
     avaliacao = cursor.fetchall()
     cursor.close()
 
@@ -40,12 +40,15 @@ def add_avaliacao():
 
     avaliacao = request.get_json()
 
-    if avaliacao.get('idJogo') is None or avaliacao.get('idJogador') is None or avaliacao.get('avaliacao') is None:
+    if avaliacao.get('id_jogo') is None or avaliacao.get('id_jogador') is None or avaliacao.get('avaliacao') is None:
         return jsonify({'erro': 'faltam campos obrigatorios'})
+
+    if confere_jogo(avaliacao.get('id_jogo')) or confere_jogador(avaliacao.get('id_jogador')):
+        return jsonify({'erro': 'id de jogador ou de jogo não cadastrado'})
 
     cur = conf.cursor()
 
-    sql = f"INSERT INTO jogos.avaliacao VALUES ({avaliacao['idJogo']},{avaliacao['idJogador']},{avaliacao['avaliacao']});"
+    sql = f"INSERT INTO jogos.avalia VALUES ({avaliacao['id_jogador']},{avaliacao['id_jogo']},{avaliacao['avaliacao']});"
     print(sql)
     cur.execute(sql)
     conf.commit()
@@ -54,17 +57,45 @@ def add_avaliacao():
     return jsonify({'sucesso': 'avaliacao adicionada com sucesso'})
 
 
-@app.route('/avaliacoes/<int:id_jogador>', methods=['PUT'])
-def update_avaliacao(id_jogador):
+def confere_jogo(pk):
+    cursor = conf.cursor()
+    cursor.execute(f"SELECT * FROM jogos.jogo WHERE id_jogo = {pk};")
+    jogo = cursor.fetchall()
+    cursor.close()
+    return not jogo
+
+
+def confere_jogador(pk):
+    cursor = conf.cursor()
+    cursor.execute(f"SELECT * FROM jogos.jogador WHERE id_jogador = {pk};")
+    album = cursor.fetchall()
+    cursor.close()
+    return not album
+
+
+def confere_avalia(pk1, pk2):
+    cursor = conf.cursor()
+    cursor.execute(f"SELECT * FROM jogos.avalia WHERE id_jogador = {pk1} AND id_jogo = {pk2};")
+    album = cursor.fetchall()
+    cursor.close()
+    return not album
+
+
+@app.route('/avaliacoes/<int:id_jogador>/<int:id_jogo>', methods=['PUT'])
+def update_avaliacao(id_jogador,id_jogo):
     avaliacao = request.get_json()
 
-    if avaliacao.get('idJogo') is None or avaliacao.get('avaliacao') is None:
+    if avaliacao.get('avaliacao') is None:
         return jsonify({'erro': 'faltam campos obrigatorios'})
+
+    if confere_avalia(id_jogador, id_jogo):
+        return jsonify({'erro': 'avaliação não encontrada'})
 
     cur = conf.cursor()
 
-    sql = f"UPDATE jogos.avaliacao SET id_jogo = {avaliacao['idJogo']}, avaliacao = {avaliacao['avaliacao']}" \
-          f" WHERE id_jogador = {id_jogador} ;"
+    sql = f"UPDATE jogos.avalia SET nota = {avaliacao['avaliacao']}" \
+          f" WHERE id_jogador = {id_jogador} AND id_jogo = {id_jogo} ;"
+
     print(sql)
     cur.execute(sql)
     conf.commit()
@@ -73,14 +104,14 @@ def update_avaliacao(id_jogador):
     return jsonify({'sucesso': 'avaliacao editada com sucesso'})
 
 
-@app.route('/avaliacoes/<int:id_jogador>', methods=['DELETE'])
-def delete_avaliacao(id_jogador):
+@app.route('/avaliacoes/<int:id_jogador>/<int:id_jogo>', methods=['DELETE'])
+def delete_avaliacao(id_jogador, id_jogo):
 
-    if not get_avaliacao(id_jogador):
+    if confere_avalia(id_jogador, id_jogo):
         return jsonify({'erro': 'avaliacao nao encontrada'})
 
     cursor = conf.cursor()
-    cursor.execute(f"DELETE FROM jogos.avaliacao WHERE id_jogador = {id_jogador};")
+    cursor.execute(f"DELETE FROM jogos.avalia WHERE id_jogador = {id_jogador} AND id_jogo = {id_jogo};")
     cursor.close()
 
     return jsonify({'sucesso': 'avaliacao excluida com sucesso'})
