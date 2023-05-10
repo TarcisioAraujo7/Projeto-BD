@@ -92,8 +92,8 @@ def update_jogador(id_jogador):
 
     cur = conf.cursor()
 
-    sql = f"UPDATE jogos.jogador SET nome_jogo = '{jogo['nome_jogo']}', preco_jogo = {jogo['preco']}," \
-          f"id_album = {jogo['id_album']}, sequencia = {jogo['sequencia']}, id_categoria = {jogo['id_categoria']} WHERE id_jogo = {id_jogo} ;"
+    sql = f"UPDATE jogos.jogador SET usuario_email = '{jogador['usuario_email']}', nickname = {jogador['nickname']}," \
+          f"nivel = {jogador['nivel']} WHERE id_jogador = {id_jogador} ;"
     print(sql)
     cur.execute(sql)
     conf.commit()
