@@ -70,7 +70,7 @@ def confere_jogador(pk):
 def confere_email(pk):
     cursor = conf.cursor()
     cursor.execute(f"SELECT * FROM jogos.usuario WHERE email_usuario = {pk};")
-    album = cursor.fetchall()
+    email = cursor.fetchall()
     cursor.close()
     return not email
 
